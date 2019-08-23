@@ -1,31 +1,46 @@
 #include <thrust/sort.h>
 #include <thrust/device_ptr.h>
+#include <fstream>
 
-const unsigned long MASK = 0xFFFF000000000000;
+using namespace std;
+
+const unsigned long MASK = 0x000000000000FFFF;
 
 struct sort_ulong2 {
     __host__ __device__
     bool operator()(const ulong2 &a, const ulong2 &b) const {
-    if      (a.x < b.x) return true;
-    else if (a.x == b.x && a.y < b.y) return true;
-    //else if (a.x == b.x && (a.y&MASK) < (b.y&MASK)) return true;
+    if      ((a.x&MASK) < (b.x&MASK)) return true;
+    else if ((a.x&MASK) == (b.x&MASK) && a.y < b.y) return true;
     else return false;
     }
 };
 
 int main(void)
 {
-    //std::cout << sizeof(unsigned long int) << std::endl;
-    //std::cout << sizeof(unsigned long) << std::endl;
-    int number_of_elements = 256*1024*1024;
+    unsigned long number_of_elements = 512*1024*1024;
     ulong2 *h_array = (ulong2*)malloc(number_of_elements * sizeof(ulong2));
-    // Define your host array
-    for (int i = 0; i < number_of_elements; i++)
-    {
-        h_array[i].x = rand() ;
-        h_array[i].y = rand() ;
-    }
     
+    // Define your host array
+    // Read from file
+    //char filename[50] = "ascii_1g_64.out";  
+    //ifstream in(filename);
+    //if (in == NULL) {
+    //    printf("Error Reading File\n");
+    //    exit(0);
+    //}
+    //for (unsigned long int i = 0; i < number_of_elements; i++) {
+    //    in >> h_array[i].x;
+    //    in >> h_array[i].y;
+    //}
+    //in.close();
+    
+    for (unsigned long i = 0; i < number_of_elements; i++)
+    {
+        h_array[i].x = (unsigned long)rand() ;
+        h_array[i].y = (unsigned long)rand() ;
+    }
+
+    //std::cout << sizeof(h_array[0].x) << " " << sizeof(h_array[0].y) << endl;
     ulong2 *d_array;
     cudaMallocHost( (void**)&d_array, number_of_elements * sizeof(ulong2) );      
     cudaMemcpy( d_array,
@@ -42,9 +57,7 @@ int main(void)
     for(int i = 0; i < 10; i++)
     {
         cudaEventRecord(start, 0);
-        thrust::sort( th_array, 
-                      th_array+number_of_elements , 
-                      sort_ulong2() );
+        thrust::sort( th_array, th_array+number_of_elements , sort_ulong2() );
         cudaEventRecord(stop, 0);
         cudaEventSynchronize(stop);
         cudaEventElapsedTime(&milliseconds, start, stop);
@@ -58,10 +71,10 @@ int main(void)
     printf("Elapsed time: %f s.", totalseconds/10000);
 
     //thrust::copy(d_array.begin(), d_array.end(), h_array.begin()); 
-    for (int i = 0; i < 16; i++)
-    {
-        std::cout << d_array[i].x << " " << (d_array[i].y & MASK) << std::endl;
-    }
+    //for (unsigned long i = number_of_elements - 32; i < number_of_elements; i++)
+    //{
+    //    std::cout << (d_array[i].x & MASK) << " " << (d_array[i].y) << std::endl;
+    //}
     
     return 0;
 }
