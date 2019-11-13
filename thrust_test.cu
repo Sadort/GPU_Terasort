@@ -10,7 +10,7 @@ const unsigned long MASK = 0xFFFF000000000000;
 
 __host__ __device__ bool operator<(const ulong2 &a, const ulong2 &b) {
     if      (a.x < b.x) return true;
-    //else if (a.x == b.x && (a.y&MASK) <= (b.y&MASK)) return true;
+    else if (a.x == b.x && (a.y&MASK) <= (b.y&MASK)) return true;
     else return false;
 }
 
@@ -21,21 +21,21 @@ typedef struct
 } mystruct1;
 
 __host__ __device__ bool operator<(const mystruct1 &a, const mystruct1 &b){
-    if      (a.x < b.x) return true;
-    else if (a.x == b.x && a.y <= b.y) return true;
+    if      (a.key.x < b.key.x) return true;
+    else if (a.key.x == b.key.x && a.key.y <= b.key.y) return true;
     else return false;
 }
 
-void sort(ulong2 *H, long int len)
+void sort(mystruct1 *H, long int len)
 {
-    thrust::host_vector<ulong2> H_vec(H, H+len);
+    thrust::host_vector<mystruct1> H_vec(H, H+len);
     cudaEvent_t start, stop;
     cudaEventCreate(&start);
     cudaEventCreate(&stop);
     float milliseconds = 0;
     float totalseconds = 0;
 
-    thrust::device_vector<ulong2> D_vec = H_vec;
+    thrust::device_vector<mystruct1> D_vec = H_vec;
     int iterations = 3;
     for(int i = 0; i < iterations; i++)
     {
@@ -51,11 +51,11 @@ void sort(ulong2 *H, long int len)
         D_vec = H_vec;
     }
         
-    printf("Elapsed time: %f s.", totalseconds/(iterations*1000));
+    printf("Elapsed time: %f s.\n\n", totalseconds/(iterations*1000));
     H_vec = D_vec;
     for(int i = 0; i < 32; i++)
     {
-        cout << H_vec[i].x << " ";
+        cout << H_vec[i].key.x << " ";
     }
     cout << endl;
 
@@ -90,13 +90,14 @@ int main(void)
         cout << keys[i] << "->" << values[i] << endl;
     }    
 */
-    long int len = 64*1024*1024;
-    ulong2 *H = (ulong2 *)malloc(len*sizeof(ulong2));
+    uint64_t len = 512L*1024*1024;
+    mystruct1 *H = (mystruct1 *)malloc(len*sizeof(mystruct1));
  
-    for (long int i = 0; i < len; i++)
+    for (uint64_t i = 0; i < len; i++)
     {
-        H[i].x = (unsigned long)rand();
-        H[i].y = (unsigned long)rand();
+        H[i].key.x = (unsigned long)rand();
+        H[i].key.y = (unsigned long)rand();
+        H[i].value = (unsigned long)rand();
     } 
 
     sort(H, len);

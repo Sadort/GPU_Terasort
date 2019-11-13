@@ -12,19 +12,37 @@ __host__ __device__ bool operator<(const ulong2 &a, const ulong2 &b) {
     else return false;
 }
 
-void sort(unsigned long *H, unsigned long *V, long int len)
+typedef struct
 {
-    thrust::host_vector<unsigned long> H_vec(H, H+len);
-    thrust::host_vector<unsigned long> V_vec(V, V+len);
-    thrust::generate(V_vec.begin(), V_vec.end(), rand);
+    unsigned long x;
+    unsigned short y;
+} mykey;
+
+typedef struct
+{
+    unsigned int x;
+    unsigned short y;
+} myvalue;
+
+__host__ __device__ bool operator<(const mykey &a, const mykey &b){
+    if      (a.x < b.x) return true;
+    else if (a.x == b.x && a.y <= b.y) return true;
+    else return false;
+}
+
+void sort(mykey *H, myvalue *V, uint64_t len)
+{
+    thrust::host_vector<mykey> H_vec(H, H+len);
+    thrust::host_vector<myvalue> V_vec(V, V+len);
+    //thrust::generate(V_vec.begin(), V_vec.end(), rand);
     cudaEvent_t start, stop;
     cudaEventCreate(&start);
     cudaEventCreate(&stop);
     float milliseconds = 0;
     float totalseconds = 0;
 
-    thrust::device_vector<unsigned long> D_vec = H_vec;
-    thrust::device_vector<unsigned long> D_V_vec = V_vec;
+    thrust::device_vector<mykey> D_vec = H_vec;
+    thrust::device_vector<myvalue> D_V_vec = V_vec;
     int iterations = 3;
     for(int i = 0; i < iterations; i++)
     {
@@ -41,11 +59,11 @@ void sort(unsigned long *H, unsigned long *V, long int len)
         D_V_vec = V_vec;
     }
         
-    printf("Elapsed time: %f s.", totalseconds/(iterations*1000));
+    printf("Elapsed time: %f s.\n\n", totalseconds/(iterations*1000));
     H_vec = D_vec;
     for(int i = 0; i < 32; i++)
     {
-        cout << H_vec[i] << " ";
+        cout << H_vec[i].x << " ";
     }
     cout << endl;
 
@@ -80,14 +98,16 @@ int main(void)
         cout << keys[i] << "->" << values[i] << endl;
     }    
 */
-    long int len = 64*1024*1024;
-    unsigned long *H = (unsigned long *)malloc(len*sizeof(unsigned long));
-    unsigned long *VALUE = (unsigned long *)malloc(len*sizeof(unsigned long));
+    uint64_t len = 1024L*1024*1024;
+    mykey *H = (mykey *)malloc(len*sizeof(mykey));
+    myvalue *VALUE = (myvalue *)malloc(len*sizeof(myvalue));
     
-    for (long int i = 0; i < len; i++)
+    for (uint64_t i = 0; i < len; i++)
     {
-        H[i] = (unsigned long)rand();
-        VALUE[i] = (unsigned long)rand();
+        H[i].x = (unsigned long)rand();
+        H[i].y = (unsigned short)rand();
+        VALUE[i].x = (unsigned int)rand();
+        VALUE[i].y = (unsigned short)rand();
     }
 
     sort(H, VALUE, len);
