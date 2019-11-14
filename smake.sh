@@ -6,11 +6,11 @@ rm -rf *.o
 
 #thrust only key
 #/usr/local/cuda/bin/nvcc -c -I/usr/local/cuda/include thrust_test.cu
-#/usr/local/cuda/bin/nvcc -o thrust_test.out thrust_test.o 
+#/usr/local/cuda/bin/nvcc -o thrust_test.out thrust_test.o -lnvidia-ml -lcudart
 
 #thrust key-value
 /usr/local/cuda/bin/nvcc -c -I/usr/local/cuda/include thrust_test_value.cu
-/usr/local/cuda/bin/nvcc -o thrust_test_value.out thrust_test_value.o
+/usr/local/cuda/bin/nvcc -o thrust_test_value.out thrust_test_value.o -lcudart -lnvidia-ml
 
 #cub
 #/usr/local/cuda/bin/nvcc -c -I/usr/local/cuda/include -I/home/jhuan308/cub example_device_radix_sort.cu -lcudart -O3 -std=c++11

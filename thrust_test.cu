@@ -3,14 +3,33 @@
 #include <thrust/host_vector.h>
 #include <thrust/sort.h>
 #include <fstream>
+#include "power.h"
 
 using namespace std;
 
 const unsigned long MASK = 0xFFFF000000000000;
 
+void PowerStart(GPUPower* objpower[], int num)
+{
+    for (int i = 0; i < num; i++)
+    {
+        objpower[i]->startPowerThread( );
+        objpower[i]->setStart(true) ;
+    }
+}
+
+void PowerStop(GPUPower* objpower[], int num)
+{
+    for (int i = 0; i < num; i++)
+    {
+        objpower[i]->setStop(true) ;
+        objpower[i]->stopPowerThread();
+    }
+}
+
 __host__ __device__ bool operator<(const ulong2 &a, const ulong2 &b) {
     if      (a.x < b.x) return true;
-    else if (a.x == b.x && (a.y&MASK) <= (b.y&MASK)) return true;
+    //else if (a.x == b.x && (a.y&MASK) <= (b.y&MASK)) return true;
     else return false;
 }
 
@@ -26,23 +45,36 @@ __host__ __device__ bool operator<(const mystruct1 &a, const mystruct1 &b){
     else return false;
 }
 
-void sort(mystruct1 *H, long int len)
+void sort(ulong2 *H, long int len)
 {
-    thrust::host_vector<mystruct1> H_vec(H, H+len);
+    thrust::host_vector<ulong2> H_vec(H, H+len);
     cudaEvent_t start, stop;
     cudaEventCreate(&start);
     cudaEventCreate(&stop);
     float milliseconds = 0;
     float totalseconds = 0;
 
-    thrust::device_vector<mystruct1> D_vec = H_vec;
-    int iterations = 3;
+    thrust::device_vector<ulong2> D_vec = H_vec;
+    int iterations = 1;
+
+    int num_threads = 1;
+    printf("number of threads: %d\n", num_threads);
+    GPUPower* powerObj[num_threads];
+    for (int i = 0; i < num_threads; i++)
+    {
+        powerObj[i] = new GPUPower(0, i);
+    }
+    PowerStart(powerObj, num_threads);
+/*
     for(int i = 0; i < iterations; i++)
     {
         cudaEventRecord(start, 0);
-
+*/
         thrust::sort(D_vec.begin(), D_vec.end());
-
+    PowerStop(powerObj, num_threads); //comment
+    system("cat powerprofile* > powerresults.txt");
+    system("rm -rf powerprofile*");    
+/*
         cudaEventRecord(stop, 0);
         cudaEventSynchronize(stop);
         cudaEventElapsedTime(&milliseconds, start, stop);
@@ -56,14 +88,6 @@ void sort(mystruct1 *H, long int len)
     for(int i = 0; i < 32; i++)
     {
         cout << H_vec[i].key.x << " ";
-    }
-    cout << endl;
-
-/*
-    thrust::sort(H, H + len);
-    for(int i = 0; i < 32; i++)
-    {
-        cout << H[i] << " ";
     }
     cout << endl;
 */
@@ -90,14 +114,13 @@ int main(void)
         cout << keys[i] << "->" << values[i] << endl;
     }    
 */
-    uint64_t len = 512L*1024*1024;
-    mystruct1 *H = (mystruct1 *)malloc(len*sizeof(mystruct1));
+    uint64_t len = 256L*1024*1024;
+    ulong2 *H = (ulong2 *)malloc(len*sizeof(ulong2));
  
     for (uint64_t i = 0; i < len; i++)
     {
-        H[i].key.x = (unsigned long)rand();
-        H[i].key.y = (unsigned long)rand();
-        H[i].value = (unsigned long)rand();
+        H[i].x = (unsigned long)rand();
+        H[i].y = (unsigned long)rand();
     } 
 
     sort(H, len);

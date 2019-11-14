@@ -3,8 +3,27 @@
 #include <thrust/host_vector.h>
 #include <thrust/sort.h>
 #include <fstream>
+#include "power.h"
 
 using namespace std;
+
+void PowerStart(GPUPower* objpower[], int num)
+{   
+    for (int i = 0; i < num; i++)
+    {   
+        objpower[i]->startPowerThread( );
+        objpower[i]->setStart(true) ;
+    }
+}
+
+void PowerStop(GPUPower* objpower[], int num)
+{   
+    for (int i = 0; i < num; i++)
+    {   
+        objpower[i]->setStop(true) ;
+        objpower[i]->stopPowerThread();
+    }
+}
 
 __host__ __device__ bool operator<(const ulong2 &a, const ulong2 &b) {
     if      (a.x < b.x) return true;
@@ -43,13 +62,27 @@ void sort(mykey *H, myvalue *V, uint64_t len)
 
     thrust::device_vector<mykey> D_vec = H_vec;
     thrust::device_vector<myvalue> D_V_vec = V_vec;
-    int iterations = 3;
+/*    int iterations = 3;
     for(int i = 0; i < iterations; i++)
     {
         cudaEventRecord(start, 0);
+*/
+    int num_threads = 1;
+    printf("number of threads: %d\n", num_threads);
+    GPUPower* powerObj[num_threads];
+    for (int i = 0; i < num_threads; i++)
+    {
+        powerObj[i] = new GPUPower(0, i);
+    }
+    PowerStart(powerObj, num_threads);
 
         thrust::sort_by_key(D_vec.begin(), D_vec.end(), D_V_vec.begin());
 
+    PowerStop(powerObj, num_threads); //comment
+    system("cat powerprofile* > powerresults.txt");
+    system("rm -rf powerprofile*");
+
+/*
         cudaEventRecord(stop, 0);
         cudaEventSynchronize(stop);
         cudaEventElapsedTime(&milliseconds, start, stop);
@@ -63,15 +96,7 @@ void sort(mykey *H, myvalue *V, uint64_t len)
     H_vec = D_vec;
     for(int i = 0; i < 32; i++)
     {
-        cout << H_vec[i].x << " ";
-    }
-    cout << endl;
-
-/*
-    thrust::sort(H, H + len);
-    for(int i = 0; i < 32; i++)
-    {
-        cout << H[i] << " ";
+        cout << H_vec[i] << " ";
     }
     cout << endl;
 */
@@ -98,7 +123,7 @@ int main(void)
         cout << keys[i] << "->" << values[i] << endl;
     }    
 */
-    uint64_t len = 1024L*1024*1024;
+    uint64_t len = 128L*1024*1024;
     mykey *H = (mykey *)malloc(len*sizeof(mykey));
     myvalue *VALUE = (myvalue *)malloc(len*sizeof(myvalue));
     
